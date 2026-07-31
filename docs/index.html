@@ -1,1 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAT-1 · Real-Time AOCS Telemetry Pipeline</title>
+<meta name="description" content="Dual-core FreeRTOS telemetry pipeline on ESP32-S3 — measured timing, hazard analysis, graceful degradation. EEL 4775 final capstone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0B1120; --panel:#131C2E; --line:#26324A;
+  --amber:#FFB428; --green:#4ADE80; --red:#F0554D;
+  --ink:#E6EAF2; --dim:#8A94A8;
+  --mono:'IBM Plex Mono',Menlo,Consolas,monospace;
+  --disp:'Space Grotesk',sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--void);color:var(--ink);font-family:var(--body);line-height:1.65;font-size:16px}
+a{color:var(--amber);text-decoration:none}
+a:hover,a:focus-visible{text-decoration:underline}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.wrap{max-width:960px;margin:0 auto;padding:0 22px}
 
+nav{position:sticky;top:0;background:rgba(11,17,32,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);z-index:10}
+nav .wrap{display:flex;gap:20px;align-items:center;padding:12px 22px;overflow-x:auto}
+nav b{font-family:var(--disp);letter-spacing:.06em;white-space:nowrap}
+nav a{color:var(--dim);font-size:13px;white-space:nowrap}
+nav a:hover{color:var(--ink);text-decoration:none}
+
+header{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.25em;color:var(--dim);text-transform:uppercase}
+h1{font-family:var(--disp);font-size:clamp(34px,6vw,58px);line-height:1.05;margin:12px 0 16px}
+h1 .accent{color:var(--amber)}
+.thesis{max-width:640px;color:var(--dim);font-size:17px}
+
+/* signature: the telemetry strip */
+.telemetry{margin:36px 0 8px;background:#060B16;border:1px solid var(--line);border-left:3px solid var(--green);
+  border-radius:6px;padding:16px 18px;font-family:var(--mono);font-size:13.5px;overflow-x:auto;white-space:nowrap}
+.telemetry .k{color:var(--dim)} .telemetry .v{color:var(--green)} .telemetry .t{color:var(--amber)}
+.telemetry-cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-bottom:28px}
+
+.linkrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.chip{font-family:var(--mono);font-size:13px;border:1px solid var(--line);border-radius:6px;padding:8px 14px;color:var(--ink)}
+.chip:hover{border-color:var(--amber);text-decoration:none}
+
+section{padding:52px 0;border-bottom:1px solid var(--line)}
+h2{font-family:var(--disp);font-size:26px;margin-bottom:6px}
+.sub{color:var(--dim);margin-bottom:24px;max-width:680px}
+h3{font-family:var(--disp);font-size:18px;margin:26px 0 8px}
+
+.videobox{position:relative;padding-top:56.25%;background:#060B16;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.videobox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+
+figure{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+figure img{width:100%;display:block}
+figcaption{font-family:var(--mono);font-size:12px;color:var(--dim);padding-top:10px}
+
+table{width:100%;border-collapse:collapse;font-size:14px;margin:14px 0}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+   text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num,th.num{font-family:var(--mono);text-align:right;white-space:nowrap}
+tr.fault td:first-child{color:var(--red)}
+.tablewrap{overflow-x:auto}
+.ok{color:var(--green);font-family:var(--mono)}
+.warn{color:var(--amber);font-family:var(--mono)}
+
+.note{border-left:3px solid var(--amber);background:var(--panel);padding:14px 18px;border-radius:0 6px 6px 0;
+      color:var(--dim);font-size:14.5px;margin:18px 0}
+.note b{color:var(--ink)}
+code{font-family:var(--mono);font-size:.92em;background:#060B16;border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+pre{font-family:var(--mono);font-size:13px;background:#060B16;border:1px solid var(--line);border-radius:8px;
+    padding:16px;overflow-x:auto;line-height:1.6}
+pre .c{color:var(--dim)} pre .g{color:var(--green)} pre .a{color:var(--amber)} pre .r{color:var(--red)}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px}
+.card h4{font-family:var(--disp);font-size:15px;margin-bottom:6px}
+.card p{font-size:14px;color:var(--dim)}
+.card .tag{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.15em;text-transform:uppercase}
+
+footer{padding:40px 0 60px;color:var(--dim);font-size:13.5px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <b>SAT-1</b>
+  <a href="#demo">Demo</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#timing">Tasks &amp; timing</a>
+  <a href="#hazards">Hazard analysis</a>
+  <a href="#degradation">Degradation</a>
+  <a href="#readme">README</a>
+  <a href="#about">About</a>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="eyebrow">EEL 4775 · Real-Time Systems · Final Capstone</div>
+  <h1>SAT-1 <span class="accent">AOCS telemetry pipeline</span><br>on a dual-core RTOS</h1>
+  <p class="thesis">A 20 Hz attitude-sensor stream flows through a state machine and downlinks
+  telemetry packets on demand — three FreeRTOS IPC primitives on one core, live HTTP
+  observability on the other, and a measured answer for every design choice.</p>
+
+  <!-- Signature element: the system's actual heartbeat line -->
+  <div class="telemetry" aria-label="Live telemetry sample">
+    <span class="k">[monitor]</span> q_depth=<span class="v">0</span>
+    evt=<span class="v">0x00</span>
+    hb: prod=<span class="v">1661</span> cons=<span class="v">1661</span>
+    coord=<span class="v">1661</span> resp=<span class="v">1661</span>
+    <span class="t">· every sample produced, processed, and downlinked — zero loss</span>
+  </div>
+  <div class="telemetry-cap">actual serial output, 83 s into a hands-off run — four heartbeats in lockstep is the system's proof of life</div>
+
+  <div class="linkrow">
+    <a class="chip" href="https://github.com/teon55123business-create/Capstone-Project">GitHub repo</a>
+    <a class="chip" href="REPLACE_WOKWI_URL">Run it live on Wokwi</a>
+    <a class="chip" href="#demo">Watch the demo ↓</a>
+  </div>
+</div></header>
+
+<section id="demo"><div class="wrap">
+  <h2>Demo</h2>
+  <p class="sub">Three and a half minutes: the theme, the live pipeline, the timing evidence,
+  and a fault injected on camera to show the degradation path working.</p>
+  <div class="videobox">
+    <!-- REPLACE_VIDEO: paste your YouTube embed URL below (https://www.youtube.com/embed/VIDEO_ID) -->
+    <iframe src="REPLACE_YOUTUBE_EMBED_URL" title="SAT-1 demo video"
+      allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+  </div>
+</div></section>
+
+<section id="architecture"><div class="wrap">
+  <h2>Architecture</h2>
+  <p class="sub">Core 1 is the real-time plane: producer → queue → consumer, an event-group
+  rendezvous, and a notification-driven responder. Core 0 is the observability plane —
+  it reads state through lock-free 32-bit variables, so watching the system never
+  perturbs it.</p>
+  <figure>
+    <img src="architecture.svg" alt="System architecture: four tasks and three IPC primitives on Core 1, monitor on Core 0">
+    <figcaption>Data flows top-to-bottom through the queue; control flows through the event group
+    and task notification. The button ISR is an independent command path into the responder.</figcaption>
+  </figure>
+  <div class="cards">
+    <div class="card"><div class="tag">Queue</div><h4>data_q · 8 × 8-byte samples</h4>
+      <p>Sized from first principles: 20 Hz producer × 400 ms worst-case consumer stall = 8 samples
+      of burst headroom. Steady-state depth measured at 0.</p></div>
+    <div class="card"><div class="tag">Event group</div><h4>Two-bit rendezvous</h4>
+      <p>The coordinator waits for PRODUCED and PROCESSED in one atomic call with clear-on-exit —
+      no double-counted cycles, no partial-wake state a semaphore pair would allow.</p></div>
+    <div class="card"><div class="tag">Task notification</div><h4>Fastest wake in the kernel</h4>
+      <p>1-to-1 signal into the responder's TCB, from a task or from the button ISR.
+      Measured 15% faster than a binary semaphore on the full wake path.</p></div>
+  </div>
+</div></section>
+
+<section id="timing"><div class="wrap">
+  <h2>Tasks &amp; timing</h2>
+  <p class="sub">Every number below was measured on the running system, with a validity check
+  attached to each run — matched heartbeat counters for task-path runs, one sample per
+  button press for ISR-path runs.</p>
+
+  <h3>Task table &amp; WCET evidence</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Task</th><th class="num">Period T</th><th class="num">WCET C (measured max)</th><th class="num">U = C/T</th><th class="num">Priority</th><th>Deadline</th></tr>
+    <tr><td>aocs_sensor</td><td class="num">50 ms</td><td class="num">33 µs</td><td class="num">0.0007</td><td class="num">8</td><td>next period (50 ms)</td></tr>
+    <tr><td>attitude_update</td><td class="num">50 ms (event-driven)</td><td class="num">2011 µs</td><td class="num">0.0402</td><td class="num">8</td><td>before queue fills (400 ms)</td></tr>
+    <tr><td>coordinator</td><td class="num">50 ms (event-driven)</td><td class="num">2907 µs</td><td class="num">0.0581</td><td class="num">9</td><td>next cycle</td></tr>
+    <tr><td>downlink</td><td class="num">50 ms (event-driven)</td><td class="num">2855 µs</td><td class="num">0.0571</td><td class="num">12</td><td>next cycle</td></tr>
+    <tr><td>monitor (Core 0)</td><td class="num">1000 ms</td><td class="num">— (non-critical plane)</td><td class="num">—</td><td class="num">4</td><td>soft</td></tr>
+  </table></div>
+  <p>Total utilization <span class="ok">U = 0.156</span> against the rate-monotonic bound for 4 tasks
+  (0.757) — <span class="ok">comfortably schedulable</span> with ~5× margin. Measured maxima are
+  dominated by UART logging, and the coordinator's figure includes preemption by the
+  higher-priority task it wakes — a conservative over-estimate, the safe direction for the claim.</p>
+
+  <h3>Measured IPC wake latency</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Path</th><th class="num">Task notification</th><th class="num">Binary semaphore</th></tr>
+    <tr><td>task → task</td><td class="num">35 µs avg / 36 µs max <span style="color:var(--dim)">(n=1661)</span></td>
+        <td class="num">41 µs avg / 42 µs max <span style="color:var(--dim)">(n=1921)</span></td></tr>
+    <tr><td>ISR → task</td><td class="num">16 µs avg / 17 µs max <span style="color:var(--dim)">(n=56)</span></td>
+        <td class="num">17 µs avg / 18 µs max <span style="color:var(--dim)">(n=61)</span></td></tr>
+  </table></div>
+  <div class="note"><b>Why 15% and not FreeRTOS's quoted ~45%?</b> The documented figure covers the
+  unblock primitive in isolation; these numbers include the full context switch, identical for both
+  paths, which compresses the ratio. The ~1 µs avg-to-max spread on every clean run became the
+  validity signal itself — contaminated runs showed maxima 50–500× the average.</div>
+</div></section>
+
+<section id="hazards"><div class="wrap">
+  <h2>Hazard analysis</h2>
+  <p class="sub">Hazards identified per a MIL-STD-882E-style severity assessment, with each
+  software mitigation mapped to NASA software-safety practice (NASA-GB-8719.13) — fault
+  detection, annunciation, bounded resources, and independent command paths.</p>
+  <div class="tablewrap"><table>
+    <tr><th>ID</th><th>Hazard</th><th>Effect</th><th>Detection (in code)</th><th>Mitigation (in code)</th><th>Sev.</th><th>Practice mapping</th></tr>
+    <tr><td>H1</td><td>Sensor task stall</td><td>Stale attitude data</td>
+        <td>Consumer 500 ms receive timeout; hb_prod frozen on monitor</td>
+        <td>Warning annunciated; last-known values held; pipeline keeps running</td>
+        <td class="num">III</td><td>Fault detection &amp; annunciation</td></tr>
+    <tr><td>H2</td><td>Processing stall / queue overflow</td><td>Sample loss</td>
+        <td>Live queue depth on monitor; drop events logged with count</td>
+        <td>Queue bounded by analysis (20 Hz × 400 ms); log-and-drop preserves sampling cadence</td>
+        <td class="num">III</td><td>Resource margins; overload management</td></tr>
+    <tr class="fault"><td>H3</td><td>Downlink automation failure</td><td>Loss of telemetry</td>
+        <td>hb_resp diverges from hb_coord — visible within 1 s</td>
+        <td>Independent ground-command path: button ISR → direct notification → downlink</td>
+        <td class="num">II</td><td>Independent backup command path</td></tr>
+    <tr><td>H4</td><td>Spurious command edges (bounce/EMI)</td><td>Command flood</td>
+        <td>Wake count vs. press count (validated during test)</td>
+        <td>ISR debounce gate; ms-scale gate specified for flight hardware</td>
+        <td class="num">IV</td><td>Input signal conditioning</td></tr>
+    <tr><td>H5</td><td>Monitor / network failure</td><td>Loss of observability only</td>
+        <td>Page stops refreshing; serial fallback available</td>
+        <td>Monitor isolated on Core 0 — cannot perturb the real-time plane</td>
+        <td class="num">IV</td><td>Partitioning / isolation</td></tr>
+    <tr><td>H6</td><td>Startup ordering race</td><td>Boot-loop crash</td>
+        <td>Found in test: notify on NULL handle asserted</td>
+        <td>Task creation order guarantees the responder handle exists before any signaler runs</td>
+        <td class="num">II</td><td>Initialization ordering (found &amp; fixed in test)</td></tr>
+  </table></div>
+</div></section>
+
+<section id="degradation"><div class="wrap">
+  <h2>Graceful degradation — demonstrated, not claimed</h2>
+  <p class="sub">The demo video injects hazard H3 live: the coordinator's notification is severed,
+  killing the autonomous downlink. Watch the monitor tell the story.</p>
+  <pre><span class="c">[monitor]</span> q_depth=0 evt=0x00 hb: prod=421 cons=421 coord=421 <span class="r">resp=380</span>   <span class="c">← resp frozen: fault detected</span>
+<span class="c">[monitor]</span> q_depth=0 evt=0x00 hb: prod=441 cons=441 coord=441 <span class="r">resp=380</span>   <span class="c">← pipeline alive, downlink dead</span>
+<span class="a">*button press — manual ground command*</span>
+<span class="g">[downlink] packet #381: rate=47 mdeg/s @ 22106 ms</span>                    <span class="c">← degraded-mode telemetry flows</span></pre>
+  <p>Detection is passive (heartbeat divergence on the 1 Hz monitor), the fallback is an
+  independent signal path that shares nothing with the failed one, and recovery is a rebuild
+  away. The sample stream itself never stops — sensing, processing, and the rendezvous keep
+  running throughout.</p>
+</div></section>
+
+<section id="readme"><div class="wrap">
+  <h2>Full README &amp; source</h2>
+  <p class="sub">The complete engineering write-up — queue sizing math, back-pressure policy,
+  event-group vs. semaphore analysis, measurement methodology including two failures found
+  and fixed during testing — lives in the repository README.</p>
+  <div class="linkrow">
+    <a class="chip" href="https://github.com/teon55123business-create/Capstone-Project#readme">Read the full README</a>
+    <a class="chip" href="https://github.com/teon55123business-create/Capstone-Project/tree/main/firmware">Browse the firmware</a>
+  </div>
+</div></section>
+
+<section id="about"><div class="wrap">
+  <h2>About this project</h2>
+  <p class="sub">Built for a flight-software / avionics firmware role: the emphasis is on
+  defensible timing, a written hazard analysis, and failure modes that were induced and
+  survived — not just features.</p>
+  <div class="cards">
+    <div class="card"><div class="tag">What I'd hand an interviewer</div><h4>A measured system</h4>
+      <p>Every claim on this page traces to a log line: WCET maxima, wake latencies with sample
+      counts, queue depth under injected overload.</p></div>
+    <div class="card"><div class="tag">What broke &amp; got fixed</div><h4>Two real bugs</h4>
+      <p>A startup race exposed by a too-fast consumer (notify on a NULL handle), and a
+      bounce-contaminated measurement caught by a press-count validity check. Both documented.</p></div>
+    <div class="card"><div class="tag">Stack</div><h4>ESP32-S3 · ESP-IDF · FreeRTOS</h4>
+      <p>Dual-core pinning, queues, event groups, task notifications, GPIO ISRs, esp_timer,
+      Wi-Fi STA + esp_http_server. Simulated in Wokwi.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <span>SAT-1 · EEL 4775 Real-Time Systems capstone · Summer 2026</span>
+  <span><a href="https://github.com/teon55123business-create/Capstone-Project/blob/main/LICENSE">MIT License</a></span>
+</div></footer>
+
+</body>
+</html>

@@ -1,0 +1,96 @@
+<svg viewBox="0 0 940 560" xmlns="http://www.w3.org/2000/svg" font-family="'IBM Plex Mono',Menlo,Consolas,monospace">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#FFB428"/>
+    </marker>
+    <marker id="arrowdim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8A94A8"/>
+    </marker>
+  </defs>
+
+  <rect width="940" height="560" fill="#0B1120"/>
+
+  <!-- Core 1 region -->
+  <rect x="20" y="40" width="600" height="500" rx="10" fill="#131C2E" stroke="#26324A"/>
+  <text x="40" y="72" fill="#FFB428" font-size="15" letter-spacing="2">CORE 1 · REAL-TIME PLANE</text>
+
+  <!-- Core 0 region -->
+  <rect x="650" y="40" width="270" height="500" rx="10" fill="#131C2E" stroke="#26324A"/>
+  <text x="670" y="72" fill="#FFB428" font-size="15" letter-spacing="2">CORE 0 · MONITOR</text>
+
+  <!-- aocs_sensor -->
+  <rect x="55" y="100" width="220" height="64" rx="6" fill="#0B1120" stroke="#4ADE80"/>
+  <text x="70" y="127" fill="#E6EAF2" font-size="15">aocs_sensor</text>
+  <text x="70" y="149" fill="#8A94A8" font-size="12">prio 8 · 20 Hz producer</text>
+
+  <!-- data_q -->
+  <rect x="55" y="220" width="220" height="58" rx="6" fill="#0B1120" stroke="#FFB428"/>
+  <text x="70" y="245" fill="#E6EAF2" font-size="15">queue: data_q</text>
+  <text x="70" y="265" fill="#8A94A8" font-size="12">8 × aocs_sample_t</text>
+
+  <!-- attitude_update -->
+  <rect x="55" y="332" width="220" height="64" rx="6" fill="#0B1120" stroke="#4ADE80"/>
+  <text x="70" y="359" fill="#E6EAF2" font-size="15">attitude_update</text>
+  <text x="70" y="381" fill="#8A94A8" font-size="12">prio 8 · consumer</text>
+
+  <!-- event group -->
+  <rect x="360" y="210" width="220" height="84" rx="6" fill="#0B1120" stroke="#FFB428"/>
+  <text x="375" y="236" fill="#E6EAF2" font-size="15">event group</text>
+  <text x="375" y="257" fill="#8A94A8" font-size="12">bit0 PRODUCED · bit1 PROCESSED</text>
+  <text x="375" y="277" fill="#8A94A8" font-size="12">wait ALL · clear on exit</text>
+
+  <!-- coordinator -->
+  <rect x="360" y="340" width="220" height="58" rx="6" fill="#0B1120" stroke="#4ADE80"/>
+  <text x="375" y="365" fill="#E6EAF2" font-size="15">coordinator</text>
+  <text x="375" y="385" fill="#8A94A8" font-size="12">prio 9 · rendezvous</text>
+
+  <!-- downlink -->
+  <rect x="360" y="446" width="220" height="58" rx="6" fill="#0B1120" stroke="#4ADE80"/>
+  <text x="375" y="471" fill="#E6EAF2" font-size="15">downlink</text>
+  <text x="375" y="491" fill="#8A94A8" font-size="12">prio 12 · responder</text>
+
+  <!-- Button ISR -->
+  <rect x="55" y="446" width="220" height="58" rx="6" fill="#0B1120" stroke="#F0554D"/>
+  <text x="70" y="471" fill="#E6EAF2" font-size="15">button ISR · GPIO18</text>
+  <text x="70" y="491" fill="#8A94A8" font-size="12">ground command path</text>
+
+  <!-- Monitor -->
+  <rect x="675" y="110" width="220" height="76" rx="6" fill="#0B1120" stroke="#4ADE80"/>
+  <text x="690" y="137" fill="#E6EAF2" font-size="15">serial OR web monitor</text>
+  <text x="690" y="158" fill="#8A94A8" font-size="12">prio 4 · 1 Hz</text>
+  <text x="690" y="176" fill="#8A94A8" font-size="12">HTTP /state JSON</text>
+
+  <!-- shared state -->
+  <rect x="675" y="240" width="220" height="120" rx="6" fill="#0B1120" stroke="#26324A"/>
+  <text x="690" y="266" fill="#E6EAF2" font-size="14">shared state</text>
+  <text x="690" y="288" fill="#8A94A8" font-size="12">heartbeats × 4</text>
+  <text x="690" y="308" fill="#8A94A8" font-size="12">last sample (ts, value)</text>
+  <text x="690" y="328" fill="#8A94A8" font-size="12">queue depth · event bits</text>
+  <text x="690" y="348" fill="#8A94A8" font-size="12">lock-free 32-bit reads</text>
+
+  <!-- Edges -->
+  <!-- producer -> queue -->
+  <line x1="165" y1="164" x2="165" y2="216" stroke="#FFB428" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="176" y="196" fill="#8A94A8" font-size="12">samples</text>
+  <!-- queue -> consumer -->
+  <line x1="165" y1="278" x2="165" y2="328" stroke="#FFB428" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- producer -> event group (bit0) -->
+  <path d="M275,132 L470,132 L470,206" fill="none" stroke="#4ADE80" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="330" y="124" fill="#8A94A8" font-size="12">sets bit 0 (produced)</text>
+  <!-- consumer -> event group (bit1) -->
+  <path d="M275,364 L330,364 L330,252 L356,252" fill="none" stroke="#4ADE80" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="286" y="350" fill="#8A94A8" font-size="12">bit 1</text>
+  <!-- event group -> coordinator -->
+  <line x1="470" y1="294" x2="470" y2="336" stroke="#FFB428" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="481" y="320" fill="#8A94A8" font-size="12">both bits</text>
+  <!-- coordinator -> downlink -->
+  <line x1="470" y1="398" x2="470" y2="442" stroke="#FFB428" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="481" y="425" fill="#8A94A8" font-size="12">task notification</text>
+  <!-- ISR -> downlink -->
+  <line x1="275" y1="475" x2="356" y2="475" stroke="#F0554D" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="282" y="465" fill="#8A94A8" font-size="11">NotifyFromISR</text>
+  <!-- core1 -> monitor reads -->
+  <path d="M620,300 L671,300" fill="none" stroke="#8A94A8" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowdim)"/>
+  <path d="M785,240 L785,186" fill="none" stroke="#8A94A8" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowdim)"/>
+  <text x="630" y="290" fill="#8A94A8" font-size="11">reads</text>
+</svg>
