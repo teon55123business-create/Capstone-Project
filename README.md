@@ -1,6 +1,5 @@
 # SAT-1 — Real-Time Systems Final Capstone
 
-## One sentence
 SAT-1 is a dual-core satellite telemetry pipeline where a 20 Hz AOCS sensor stream flows through an attitude state machine and downlinks packets on demand, monitored live over HTTP without disturbing the real-time core.
 
 ## Demo
