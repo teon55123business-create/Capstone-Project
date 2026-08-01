@@ -41,7 +41,7 @@ Injected live in the demo (hazard H3): the coordinator's notification is severed
 ## Build & run
 - Toolchain: ESP-IDF (Wokwi `esp-idf` builder), target ESP32-S3-DevKitC-1.
 - Simulate: open the Wokwi project `MCFARLANE-FINAL-RTS26Summer`, run. Default `USE_WEBSERVER=0` needs no Wi-Fi; the serial monitor prints the pipeline state once per second.
-- Web monitor: set `USE_WEBSERVER=1` in `firmware/src/main.c`, run, wait for `Got IP`, open the page from Wokwi's network indicator.
+- Web monitor: set `USE_WEBSERVER=1` in `firmware/main.c`, run, wait for `Got IP`, open the page from Wokwi's network indicator.
 - The button on GPIO18 is the ground-command input; `diagram.json` sets `"bounce": "0"`.
 - Firmware and the full App 5 engineering README (queue sizing math, back-pressure policy, IPC trade studies, measurement methodology including two bugs found and fixed): [firmware/](firmware/).
 
